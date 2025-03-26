@@ -46,11 +46,29 @@
 - 止盈止损和交易类别调整
 - 一键启动交易或分析系统
 
+## 🚀 一键安装 (Ubuntu VPS)
+
+如果您使用Ubuntu系统，可以使用我们提供的一键安装脚本快速部署：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install.sh -o install.sh && chmod +x install.sh && ./install.sh
+```
+
+此命令将自动完成所有安装步骤，包括：
+- 检查并安装系统依赖
+- 克隆项目代码
+- 设置Python环境
+- 安装所有需要的包
+- 创建配置文件
+- 设置启动脚本
+
+详细说明请参考 [INSTALL.md](INSTALL.md) 文件。
+
 ## 🛠️ 安装与配置
 
 1. 克隆此仓库
 ```
-git clone https://github.com/yourusername/crypto-quant-trader.git
+git clone https://github.com/fishzone24/crypto-quant-trader.git
 cd crypto-quant-trader
 ```
 

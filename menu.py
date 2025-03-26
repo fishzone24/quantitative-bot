@@ -21,6 +21,14 @@ class Menu:
         """初始化菜单系统"""
         # 加载环境变量
         load_dotenv()
+        
+        # 显示启动提示
+        print("\n" + "=" * 60)
+        print("欢迎使用 CryptoQuantTrader 系统！")
+        print("\n下次可通过以下方式启动程序：")
+        print("方式1: cd ~/crypto-quant-trader && source venv/bin/activate && python run.py")
+        print("方式2: ~/start-quant-trader.sh")
+        print("=" * 60 + "\n")
     
     def clear_screen(self):
         """清屏"""

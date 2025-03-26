@@ -162,10 +162,11 @@ chmod +x ~/start-quant-trader.sh
 
 # 完成
 echo -e "${BLUE}=====================================${NC}"
-echo -e "${GREEN}安装完成! 您可以通过以下方式启动:${NC}"
-echo -e "${YELLOW}方式1: ${NC}cd ~/crypto-quant-trader && source venv/bin/activate && python run.py"
-echo -e "${YELLOW}方式2: ${NC}~/start-quant-trader.sh"
+echo -e "${GREEN}安装完成! 正在启动系统...${NC}"
 echo -e "${BLUE}=====================================${NC}"
-echo -e "${YELLOW}首次使用前，请确保编辑.env文件配置您的API密钥。${NC}"
-echo -e "${YELLOW}使用命令: ${NC}nano ~/crypto-quant-trader/.env"
-echo -e "${BLUE}=====================================${NC}" 
+
+# 自动启动程序
+cd ~/crypto-quant-trader
+source venv/bin/activate
+echo -e "${GREEN}系统启动中，请稍候...${NC}"
+python run.py 

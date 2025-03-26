@@ -27,7 +27,6 @@ if [ -d ~/crypto-quant-trader ]; then
     echo -e "${YELLOW}检测到已存在的安装目录，正在删除...${NC}"
     rm -rf ~/crypto-quant-trader
 fi
-mkdir -p ~/crypto-quant-trader
 
 # 询问是否从GitHub克隆
 echo -e "${YELLOW}您希望如何获取代码?${NC}"
@@ -44,16 +43,30 @@ if [ "$clone_choice" = "1" ]; then
     
     # 克隆代码库
     echo -e "${YELLOW}正在从GitHub克隆代码...${NC}"
-    cd ~/crypto-quant-trader
-    rm -rf * .* 2>/dev/null || true  # 确保目录完全为空
+    cd ~
+    rm -rf temp_quant_bot
+    mkdir temp_quant_bot
+    cd temp_quant_bot
     git clone https://github.com/fishzone24/quantitative-bot.git .
     
     if [ $? -ne 0 ]; then
         echo -e "${RED}克隆失败! 请检查网络连接或GitHub仓库地址。${NC}"
+        cd ~
+        rm -rf temp_quant_bot
         exit 1
     fi
+    
+    # 移动到目标目录
+    echo -e "${YELLOW}正在移动文件到目标目录...${NC}"
+    mkdir -p ~/crypto-quant-trader
+    mv * ~/crypto-quant-trader/
+    mv .* ~/crypto-quant-trader/ 2>/dev/null || true
+    cd ~
+    rm -rf temp_quant_bot
+    cd ~/crypto-quant-trader
 else
     echo -e "${GREEN}使用当前目录的代码继续安装。${NC}"
+    mkdir -p ~/crypto-quant-trader
     cd ~/crypto-quant-trader
 fi
 

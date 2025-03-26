@@ -23,7 +23,7 @@ fi
 
 # 创建项目目录
 echo -e "${YELLOW}创建项目目录...${NC}"
-if [ -d "~/crypto-quant-trader" ]; then
+if [ -d ~/crypto-quant-trader ]; then
     echo -e "${YELLOW}检测到已存在的安装目录，正在删除...${NC}"
     rm -rf ~/crypto-quant-trader
 fi

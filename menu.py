@@ -512,32 +512,97 @@ class Menu:
     def run(self):
         """运行菜单"""
         while True:
-            self.show_main_menu()
-            choice = input("\n请输入您的选择 [0-9]: ")
+            choice = self.show_main_menu()
             
-            if choice == '0':
-                print("退出程序")
+            if choice == 0:
+                # 退出程序
+                print("👋 感谢使用加密货币量化交易系统!")
+                print("正在退出...\n")
                 break
-            elif choice == '1':
-                self.show_dashboard()
-            elif choice == '2':
-                self.set_exchange_api()
-            elif choice == '3':
-                self.set_trading_settings()
-            elif choice == '4':
-                self.set_twitter_account()
-            elif choice == '5':
-                self.set_ai_settings()
-            elif choice == '6':
-                self.set_notification()
-            elif choice == '7':
-                self.run_analysis()
-            elif choice == '8':
-                self.start_trading()
-            elif choice == '9':
-                self.view_logs()
-            else:
-                print("❌ 无效的选择，请重试")
+            
+            elif choice == 1:
+                # 启动交易系统
+                self.show_banner()
+                print("🚀 正在启动交易系统...")
+                time.sleep(1)
+                
+                # 导入并运行交易系统
+                try:
+                    from main import CryptoQuantTrader
+                    trader = CryptoQuantTrader()
+                    
+                    print("\n✅ 交易系统已启动，按 Ctrl+C 停止")
+                    try:
+                        trader.start()
+                    except KeyboardInterrupt:
+                        print("\n⚠️ 用户中断，交易系统已停止")
+                    except Exception as e:
+                        print(f"\n❌ 交易系统出错: {str(e)}")
+                except Exception as e:
+                    print(f"\n❌ 无法启动交易系统: {str(e)}")
+            
+            elif choice == 2:
+                # 仅运行市场分析
+                self.show_banner()
+                print("🔍 正在运行市场分析...")
+                time.sleep(1)
+                
+                # 导入并运行市场分析
+                try:
+                    from analysis.market_analysis import MarketAnalyzer
+                    analyzer = MarketAnalyzer()
+                    summary = analyzer.get_market_summary()
+                    
+                    # 显示分析结果
+                    print("\n📊 市场分析结果:")
+                    for symbol, timeframes in summary["symbols"].items():
+                        print(f"\n{symbol}:")
+                        for timeframe, analysis in timeframes.items():
+                            print(f"\n{timeframe}周期:")
+                            print(f"当前价格: {analysis['current_price']}")
+                            print("技术指标:")
+                            for indicator, value in analysis['indicators'].items():
+                                print(f"- {indicator}: {value}")
+                            print("交易信号:")
+                            signals = analysis['signals']
+                            if signals['buy']:
+                                print(f"- 买入信号 (强度: {signals['strength']})")
+                                print(f"- 原因: {', '.join(signals['reason'])}")
+                            if signals['sell']:
+                                print(f"- 卖出信号 (强度: {abs(signals['strength'])})")
+                                print(f"- 原因: {', '.join(signals['reason'])}")
+                    
+                    print("\n✅ 市场分析完成")
+                except Exception as e:
+                    print(f"\n❌ 市场分析出错: {str(e)}")
+                
+            elif choice == 3:
+                # 交易所设置
+                self.show_exchange_menu()
+            
+            elif choice == 4:
+                # 社交媒体设置
+                self.show_social_media_menu()
+            
+            elif choice == 5:
+                # AI决策系统设置
+                self.show_ai_settings_menu()
+            
+            elif choice == 6:
+                # 自动交易设置
+                self.show_auto_trading_menu()
+            
+            elif choice == 7:
+                # 查看交易记录
+                self.view_trade_records()
+            
+            elif choice == 8:
+                # 生成交易报告
+                self.generate_reports()
+            
+            elif choice == 9:
+                # 关闭所有头寸
+                self.close_all_positions()
             
             # 每次操作后暂停
             input("\n按 Enter 继续...")

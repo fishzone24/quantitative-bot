@@ -45,6 +45,7 @@ if [ "$clone_choice" = "1" ]; then
     # 克隆代码库
     echo -e "${YELLOW}正在从GitHub克隆代码...${NC}"
     cd ~/crypto-quant-trader
+    rm -rf * .* 2>/dev/null || true  # 确保目录完全为空
     git clone https://github.com/fishzone24/quantitative-bot.git .
     
     if [ $? -ne 0 ]; then

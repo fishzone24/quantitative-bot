@@ -550,12 +550,16 @@ class Menu:
                 # 导入并运行市场分析
                 try:
                     from analysis.market_analysis import MarketAnalyzer
-                    analyzer = MarketAnalyzer()
-                    summary = analyzer.get_market_summary()
+                    from analysis.social_analysis import SocialMediaAnalyzer
+                    from analysis.ai_analysis import AIAnalyzer
                     
-                    # 显示分析结果
+                    # 市场分析
+                    market_analyzer = MarketAnalyzer()
+                    market_summary = market_analyzer.get_market_summary()
+                    
+                    # 显示市场分析结果
                     print("\n📊 市场分析结果:")
-                    for symbol, timeframes in summary["symbols"].items():
+                    for symbol, timeframes in market_summary["symbols"].items():
                         print(f"\n{symbol}:")
                         for timeframe, analysis in timeframes.items():
                             print(f"\n{timeframe}周期:")
@@ -572,7 +576,35 @@ class Menu:
                                 print(f"- 卖出信号 (强度: {abs(signals['strength'])})")
                                 print(f"- 原因: {', '.join(signals['reason'])}")
                     
-                    print("\n✅ 市场分析完成")
+                    # AI分析
+                    print("\n🤖 正在运行AI分析...")
+                    ai_analyzer = AIAnalyzer()
+                    ai_summary = ai_analyzer.get_ai_summary()
+                    
+                    # 显示AI分析结果
+                    print("\n📈 AI分析结果:")
+                    for symbol, analysis in ai_summary["symbols"].items():
+                        print(f"\n{symbol}:")
+                        print(f"趋势预测: {analysis['trend']}")
+                        print(f"置信度: {analysis['confidence']}")
+                        print(f"建议操作: {analysis['action']}")
+                        print(f"理由: {analysis['reason']}")
+                    
+                    # 社交媒体分析
+                    print("\n💬 正在分析社交媒体...")
+                    social_analyzer = SocialMediaAnalyzer()
+                    social_summary = social_analyzer.get_social_summary()
+                    
+                    # 显示社交媒体分析结果
+                    print("\n📱 社交媒体分析结果:")
+                    for symbol, analysis in social_summary["symbols"].items():
+                        print(f"\n{symbol}:")
+                        print(f"情感得分: {analysis['sentiment_score']}")
+                        print(f"市场情绪: {analysis['market_sentiment']}")
+                        print(f"热门话题: {', '.join(analysis['hot_topics'])}")
+                        print(f"重要新闻: {', '.join(analysis['important_news'])}")
+                    
+                    print("\n✅ 分析完成")
                 except Exception as e:
                     print(f"\n❌ 市场分析出错: {str(e)}")
                 

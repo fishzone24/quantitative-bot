@@ -57,6 +57,7 @@ def init_settings():
 def run_command_line():
     """命令行模式运行"""
     try:
+        # 市场分析
         print("\n🔍 正在运行市场分析...")
         market_analyzer = MarketAnalyzer()
         market_summary = market_analyzer.get_market_summary()
@@ -79,6 +80,7 @@ def run_command_line():
                     print(f"- 卖出信号 (强度: {abs(signals['strength'])})")
                     print(f"- 原因: {', '.join(signals['reason'])}")
         
+        # AI分析
         print("\n🤖 正在运行AI分析...")
         ai_analyzer = AIAnalyzer()
         ai_summary = ai_analyzer.get_ai_summary()
@@ -91,6 +93,7 @@ def run_command_line():
             print(f"建议操作: {analysis['action']}")
             print(f"理由: {analysis['reason']}")
         
+        # 社交媒体分析
         print("\n💬 正在分析社交媒体...")
         social_analyzer = SocialMediaAnalyzer()
         social_summary = social_analyzer.get_social_summary()

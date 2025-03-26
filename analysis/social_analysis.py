@@ -50,11 +50,33 @@ class SocialMediaAnalyzer:
             "negative": -0.3
         })
         
+        # 模拟模式设置
+        self.simulation_mode = self.config.get("simulation_mode", False)
+        
         # 初始化Twitter登录
         self.driver = None
-        self.init_twitter_login()
         
-        logger.info("初始化社交媒体分析模块")
+        # 从环境变量读取模拟模式标志
+        simulation_env = os.getenv("SOCIAL_SIMULATION_MODE", "").lower()
+        if simulation_env in ["true", "1", "yes", "y"]:
+            self.simulation_mode = True
+            logger.info("基于环境变量设置启用社交媒体分析模拟模式")
+        
+        # 检查Twitter登录凭证
+        email = os.getenv("TWITTER_EMAIL")
+        password = os.getenv("TWITTER_PASSWORD")
+        if not email or not password:
+            logger.warning("Twitter登录凭证不完整，启用社交媒体分析模拟模式")
+            self.simulation_mode = True
+        
+        # 如果不使用模拟模式，尝试登录Twitter
+        if not self.simulation_mode:
+            logger.info("尝试连接到真实Twitter...")
+            self.init_twitter_login()
+        else:
+            logger.info("使用模拟模式，不连接真实Twitter")
+        
+        logger.info("社交媒体分析模块初始化完成")
     
     def init_twitter_login(self):
         """初始化Twitter登录"""
@@ -64,7 +86,7 @@ class SocialMediaAnalyzer:
             password = os.getenv("TWITTER_PASSWORD")
             
             if not email or not password:
-                logger.warning("Twitter登录凭证不完整，社交媒体分析将被禁用")
+                logger.warning("Twitter登录凭证不完整，社交媒体分析将使用模拟数据")
                 return
             
             try:
@@ -74,10 +96,19 @@ class SocialMediaAnalyzer:
                 chrome_options.add_argument("--no-sandbox")
                 chrome_options.add_argument("--disable-dev-shm-usage")
                 chrome_options.add_argument("--disable-gpu")
+                chrome_options.add_argument("--window-size=1920,1080")  # 设置窗口大小
+                
+                # 解决自动化检测问题
+                chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+                chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                chrome_options.add_experimental_option("useAutomationExtension", False)
                 
                 # 兼容Linux环境
                 chrome_options.add_argument("--disable-extensions")
                 chrome_options.add_argument("--disable-software-rasterizer")
+                
+                # 添加用户代理
+                chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
                 
                 # 尝试使用直接的ChromeDriver路径
                 try:
@@ -94,6 +125,7 @@ class SocialMediaAnalyzer:
                         logger.warning("未检测到Chrome或Chromium浏览器")
                     
                     # 尝试直接使用系统Chrome
+                    logger.info("尝试直接初始化Chrome...")
                     self.driver = webdriver.Chrome(options=chrome_options)
                 except Exception as e1:
                     logger.warning(f"直接初始化Chrome失败: {str(e1)}，尝试使用webdriver-manager")
@@ -110,6 +142,7 @@ class SocialMediaAnalyzer:
                         os.system(f"chmod +x {driver_path}")
                         
                         service = Service(driver_path)
+                        logger.info(f"使用WebDriver Manager安装的驱动: {driver_path}")
                         self.driver = webdriver.Chrome(service=service, options=chrome_options)
                     except Exception as e2:
                         logger.error(f"使用webdriver-manager初始化Chrome失败: {str(e2)}")
@@ -120,8 +153,12 @@ class SocialMediaAnalyzer:
                         return
                 
                 # 登录Twitter
-                self._login_twitter(email, password)
-                logger.info("Twitter登录成功")
+                if self._login_twitter(email, password):
+                    logger.info("Twitter登录成功")
+                else:
+                    logger.warning("Twitter登录失败，将使用模拟社交媒体分析")
+                    self.driver.quit()
+                    self.driver = None
                 
             except Exception as e:
                 logger.error(f"初始化Twitter浏览器失败: {str(e)}")
@@ -134,29 +171,181 @@ class SocialMediaAnalyzer:
     def _login_twitter(self, email, password):
         """登录Twitter"""
         try:
+            logger.info("开始Twitter登录流程...")
+            
             # 访问Twitter登录页面
-            self.driver.get("https://twitter.com/login")
-            time.sleep(3)  # 等待页面加载
+            self.driver.get("https://twitter.com/i/flow/login")
+            logger.info("已打开Twitter登录页面，等待加载...")
+            time.sleep(5)  # 等待页面完全加载
+            
+            # 移除navigator.webdriver属性以绕过机器人检测
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
             # 输入邮箱
-            email_input = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.NAME, "text"))
-            )
-            email_input.send_keys(email)
-            self.driver.find_element(By.XPATH, "//span[text()='Next']").click()
-            time.sleep(2)
-            
-            # 输入密码
-            password_input = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.NAME, "password"))
-            )
-            password_input.send_keys(password)
-            self.driver.find_element(By.XPATH, "//span[text()='Log in']").click()
-            time.sleep(3)
+            try:
+                logger.info("尝试查找邮箱输入框...")
+                # 多种定位方式
+                try:
+                    email_input = WebDriverWait(self.driver, 15).until(
+                        EC.presence_of_element_located((By.XPATH, "//input[@autocomplete='username']"))
+                    )
+                except:
+                    try:
+                        email_input = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((By.NAME, "text"))
+                        )
+                    except:
+                        email_input = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "input[data-testid='ocfEnterTextTextInput']"))
+                        )
+                
+                logger.info("找到邮箱输入框，输入邮箱...")
+                email_input.clear()
+                # 模拟人工输入
+                for char in email:
+                    email_input.send_keys(char)
+                    time.sleep(0.1)  # 模拟人工输入的时间间隔
+                
+                time.sleep(1)
+                
+                # 多种方式尝试点击下一步按钮
+                try:
+                    next_button = WebDriverWait(self.driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, "//span[text()='Next']"))
+                    )
+                    next_button.click()
+                except:
+                    try:
+                        next_button = WebDriverWait(self.driver, 10).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, "div[data-testid='ocfEnterTextNextButton']"))
+                        )
+                        next_button.click()
+                    except:
+                        # 尝试JavaScript点击
+                        next_buttons = self.driver.find_elements(By.XPATH, "//div[@role='button']")
+                        for button in next_buttons:
+                            if "next" in button.text.lower() or "下一步" in button.text:
+                                self.driver.execute_script("arguments[0].click();", button)
+                                break
+                
+                logger.info("已点击下一步按钮，等待密码输入框...")
+                time.sleep(3)  # 等待转到密码页面
+                
+                # 可能需要输入用户名
+                try:
+                    username_input = WebDriverWait(self.driver, 5).until(
+                        EC.presence_of_element_located((By.NAME, "text"))
+                    )
+                    logger.info("检测到需要输入用户名...")
+                    username = email.split('@')[0]  # 使用邮箱前缀作为用户名
+                    username_input.clear()
+                    for char in username:
+                        username_input.send_keys(char)
+                        time.sleep(0.1)
+                    
+                    # 点击下一步
+                    try:
+                        next_button = WebDriverWait(self.driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, "//span[text()='Next']"))
+                        )
+                        next_button.click()
+                    except:
+                        try:
+                            next_button = WebDriverWait(self.driver, 10).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, "div[data-testid='ocfEnterTextNextButton']"))
+                            )
+                            next_button.click()
+                        except:
+                            # 尝试JavaScript点击
+                            next_buttons = self.driver.find_elements(By.XPATH, "//div[@role='button']")
+                            for button in next_buttons:
+                                if "next" in button.text.lower() or "下一步" in button.text:
+                                    self.driver.execute_script("arguments[0].click();", button)
+                                    break
+                    
+                    logger.info("已点击用户名后的下一步按钮，等待密码输入框...")
+                    time.sleep(3)
+                except:
+                    logger.info("不需要额外输入用户名，继续...")
+                
+                # 输入密码
+                try:
+                    logger.info("尝试查找密码输入框...")
+                    password_input = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.NAME, "password"))
+                    )
+                    
+                    logger.info("找到密码输入框，输入密码...")
+                    password_input.clear()
+                    for char in password:
+                        password_input.send_keys(char)
+                        time.sleep(0.1)  # 模拟人工输入的时间间隔
+                    
+                    time.sleep(1)
+                    
+                    # 点击登录按钮
+                    try:
+                        login_button = WebDriverWait(self.driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, "//span[text()='Log in']"))
+                        )
+                        login_button.click()
+                    except:
+                        try:
+                            login_button = WebDriverWait(self.driver, 10).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, "div[data-testid='LoginForm_Login_Button']"))
+                            )
+                            login_button.click()
+                        except:
+                            # 尝试JavaScript点击
+                            login_buttons = self.driver.find_elements(By.XPATH, "//div[@role='button']")
+                            for button in login_buttons:
+                                if "log in" in button.text.lower() or "登录" in button.text:
+                                    self.driver.execute_script("arguments[0].click();", button)
+                                    break
+                    
+                    logger.info("已点击登录按钮，等待登录完成...")
+                    time.sleep(5)  # 等待登录完成
+                    
+                    # 检查是否登录成功
+                    try:
+                        # 检查是否有欢迎回来的消息或主页元素
+                        WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "a[data-testid='AppTabBar_Home_Link']"))
+                        )
+                        logger.info("检测到主页元素，登录成功!")
+                        return True
+                    except:
+                        logger.warning("未检测到主页元素，登录可能失败")
+                        
+                        # 检查是否有验证码或安全挑战
+                        try:
+                            if "verify" in self.driver.current_url or "challenge" in self.driver.current_url:
+                                logger.warning("检测到登录安全挑战，无法自动完成")
+                                return False
+                        except:
+                            pass
+                        
+                        # 截图登录失败情况
+                        try:
+                            screenshot_path = "twitter_login_error.png"
+                            self.driver.save_screenshot(screenshot_path)
+                            logger.info(f"登录页面截图已保存到: {screenshot_path}")
+                        except Exception as e:
+                            logger.error(f"截图失败: {str(e)}")
+                        
+                        return False
+                    
+                except Exception as e:
+                    logger.error(f"输入密码过程出错: {str(e)}")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"输入邮箱过程出错: {str(e)}")
+                return False
             
         except Exception as e:
             logger.error(f"Twitter登录失败: {str(e)}")
-            raise
+            return False
     
     def fetch_tweets(self, account_name, count=100):
         """
@@ -174,69 +363,164 @@ class SocialMediaAnalyzer:
             return []
             
         try:
-            # 访问用户主页
-            self.driver.get(f"https://twitter.com/{account_name}")
-            time.sleep(3)
+            max_retries = 3
+            retry_count = 0
             
-            # 获取推文
-            tweets = []
-            last_height = self.driver.execute_script("return document.body.scrollHeight")
-            
-            while len(tweets) < count:
-                # 获取当前页面的推文
-                tweet_elements = self.driver.find_elements(By.CSS_SELECTOR, "article[data-testid='tweet']")
-                
-                for tweet in tweet_elements:
+            while retry_count < max_retries:
+                try:
+                    # 访问用户主页
+                    logger.info(f"正在访问{account_name}的Twitter主页...")
+                    self.driver.get(f"https://twitter.com/{account_name}")
+                    
+                    # 等待页面加载
                     try:
-                        # 获取推文文本
-                        text = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='tweetText']").text
+                        WebDriverWait(self.driver, 15).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "article[data-testid='tweet']"))
+                        )
+                        logger.info(f"成功加载{account_name}的推文")
+                    except:
+                        logger.warning(f"等待推文加载超时，尝试继续处理...")
+                    
+                    time.sleep(3)
+                    
+                    # 获取推文
+                    tweets = []
+                    last_height = self.driver.execute_script("return document.body.scrollHeight")
+                    scroll_attempts = 0
+                    max_scroll_attempts = 5
+                    
+                    while len(tweets) < count and scroll_attempts < max_scroll_attempts:
+                        # 获取当前页面的推文
+                        tweet_elements = self.driver.find_elements(By.CSS_SELECTOR, "article[data-testid='tweet']")
                         
-                        # 获取时间
-                        time_element = tweet.find_element(By.TAG_NAME, "time")
-                        created_at = datetime.fromisoformat(time_element.get_attribute("datetime"))
-                        
-                        # 获取互动数据
-                        try:
-                            favorite_count = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='like']").text
-                        except:
-                            favorite_count = "0"
+                        if not tweet_elements:
+                            logger.warning(f"未找到{account_name}的推文元素，可能是页面结构变化或账户不存在")
+                            # 截图记录错误
+                            try:
+                                screenshot_path = f"twitter_{account_name}_error.png"
+                                self.driver.save_screenshot(screenshot_path)
+                                logger.info(f"推文页面截图已保存到: {screenshot_path}")
+                            except Exception as e:
+                                logger.error(f"截图失败: {str(e)}")
                             
-                        try:
-                            retweet_count = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='retweet']").text
-                        except:
-                            retweet_count = "0"
+                            scroll_attempts += 1
+                            time.sleep(2)
+                            continue
                         
-                        tweets.append({
-                            'id': str(len(tweets) + 1),
-                            'text': text,
-                            'created_at': created_at,
-                            'user': account_name,
-                            'favorite_count': int(favorite_count) if favorite_count.isdigit() else 0,
-                            'retweet_count': int(retweet_count) if retweet_count.isdigit() else 0
-                        })
+                        logger.info(f"找到{len(tweet_elements)}条推文，正在解析...")
                         
+                        for tweet in tweet_elements:
+                            try:
+                                # 获取推文文本
+                                try:
+                                    text_element = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='tweetText']")
+                                    text = text_element.text
+                                except:
+                                    # 尝试其他定位方式
+                                    try:
+                                        text_element = tweet.find_element(By.XPATH, ".//div[@lang]")
+                                        text = text_element.text
+                                    except:
+                                        text = "无法获取推文内容"
+                                
+                                # 获取时间
+                                try:
+                                    time_element = tweet.find_element(By.TAG_NAME, "time")
+                                    created_at = datetime.fromisoformat(time_element.get_attribute("datetime"))
+                                except:
+                                    # 如果无法获取时间，使用当前时间
+                                    created_at = datetime.now()
+                                
+                                # 获取互动数据
+                                try:
+                                    favorite_count = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='like']").text
+                                    if not favorite_count:
+                                        favorite_count = "0"
+                                except:
+                                    favorite_count = "0"
+                                    
+                                try:
+                                    retweet_count = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='retweet']").text
+                                    if not retweet_count:
+                                        retweet_count = "0"
+                                except:
+                                    retweet_count = "0"
+                                
+                                # 处理数字格式
+                                try:
+                                    fav_count = self._parse_count(favorite_count)
+                                    rt_count = self._parse_count(retweet_count)
+                                except:
+                                    fav_count = 0
+                                    rt_count = 0
+                                
+                                # 检查是否已经添加过相同ID的推文
+                                tweet_id = f"{account_name}_{len(tweets) + 1}"
+                                if not any(t['id'] == tweet_id for t in tweets):
+                                    tweets.append({
+                                        'id': tweet_id,
+                                        'text': text,
+                                        'created_at': created_at,
+                                        'user': account_name,
+                                        'favorite_count': fav_count,
+                                        'retweet_count': rt_count
+                                    })
+                                    
+                                    if len(tweets) >= count:
+                                        break
+                                
+                            except Exception as e:
+                                logger.warning(f"解析推文失败: {str(e)}")
+                                continue
+                        
+                        # 如果已经获取足够的推文，跳出循环
                         if len(tweets) >= count:
                             break
-                            
-                    except Exception as e:
-                        logger.warning(f"解析推文失败: {str(e)}")
-                        continue
-                
-                # 滚动到页面底部
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
-                
-                new_height = self.driver.execute_script("return document.body.scrollHeight")
-                if new_height == last_height:
-                    break
-                last_height = new_height
+                        
+                        # 滚动到页面底部加载更多推文
+                        logger.info("滚动页面加载更多推文...")
+                        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                        time.sleep(3)
+                        
+                        new_height = self.driver.execute_script("return document.body.scrollHeight")
+                        if new_height == last_height:
+                            scroll_attempts += 1
+                        else:
+                            scroll_attempts = 0
+                        
+                        last_height = new_height
+                    
+                    logger.info(f"已获取{len(tweets)}条{account_name}的推文")
+                    return tweets
+                    
+                except Exception as e:
+                    retry_count += 1
+                    logger.warning(f"获取{account_name}的推文失败 (尝试 {retry_count}/{max_retries}): {str(e)}")
+                    time.sleep(2)
             
-            logger.info(f"已获取{len(tweets)}条{account_name}的推文")
-            return tweets
+            logger.error(f"在{max_retries}次尝试后仍无法获取{account_name}的推文")
+            return []
             
         except Exception as e:
             logger.error(f"获取{account_name}的推文失败: {str(e)}")
             return []
+    
+    def _parse_count(self, count_str):
+        """解析推文互动数量字符串"""
+        try:
+            if not count_str or count_str == "":
+                return 0
+            
+            # 处理 K, M 等单位
+            if 'K' in count_str or 'k' in count_str:
+                return int(float(count_str.replace('K', '').replace('k', '')) * 1000)
+            elif 'M' in count_str or 'm' in count_str:
+                return int(float(count_str.replace('M', '').replace('m', '')) * 1000000)
+            else:
+                # 移除可能的逗号
+                return int(count_str.replace(',', ''))
+        except:
+            return 0
     
     def __del__(self):
         """清理资源"""
@@ -362,70 +646,79 @@ class SocialMediaAnalyzer:
             dict: 分析结果
         """
         if not self.driver:
-            logger.warning("Twitter未登录，无法分析币安推文")
-            return self._generate_mock_analysis()
-            
-        all_tweets = []
-        
-        # 获取所有配置的Twitter账户的推文
-        for account in self.twitter_accounts:
-            account_tweets = self.fetch_tweets(account, count=20)
-            all_tweets.extend(account_tweets)
-        
-        # 如果无法获取真实推文，使用模拟数据
-        if not all_tweets:
-            logger.warning("无法获取真实推文，使用模拟数据")
+            logger.warning("Twitter未登录或初始化失败，将使用模拟数据")
             return self._generate_mock_analysis()
         
-        # 按时间排序
-        all_tweets.sort(key=lambda x: x['created_at'], reverse=True)
-        
-        # 只保留最近24小时的推文
-        recent_time = datetime.now() - timedelta(hours=24)
-        recent_tweets = [tweet for tweet in all_tweets if tweet['created_at'] > recent_time]
-        
-        # 分析每条推文的情感和关键词
-        for tweet in recent_tweets:
-            tweet['sentiment_score'] = self.analyze_tweet_sentiment(tweet['text'])
-            tweet['important_keywords'] = self.detect_important_keywords(tweet['text'])
+        # 尝试获取推文，如果失败则使用模拟数据
+        try:
+            all_tweets = []
             
-            # 根据情感分数确定情感类别
-            if tweet['sentiment_score'] >= self.sentiment_threshold['positive']:
-                tweet['sentiment'] = 'positive'
-            elif tweet['sentiment_score'] <= self.sentiment_threshold['negative']:
-                tweet['sentiment'] = 'negative'
+            # 获取所有配置的Twitter账户的推文
+            for account in self.twitter_accounts:
+                try:
+                    account_tweets = self.fetch_tweets(account, count=20)
+                    all_tweets.extend(account_tweets)
+                except Exception as e:
+                    logger.error(f"获取{account}的推文失败: {str(e)}")
+            
+            # 如果无法获取真实推文，使用模拟数据
+            if not all_tweets:
+                logger.warning("无法获取真实推文，使用模拟数据")
+                return self._generate_mock_analysis()
+            
+            # 按时间排序
+            all_tweets.sort(key=lambda x: x['created_at'], reverse=True)
+            
+            # 只保留最近24小时的推文
+            recent_time = datetime.now() - timedelta(hours=24)
+            recent_tweets = [tweet for tweet in all_tweets if tweet['created_at'] > recent_time]
+            
+            # 分析每条推文的情感和关键词
+            for tweet in recent_tweets:
+                tweet['sentiment_score'] = self.analyze_tweet_sentiment(tweet['text'])
+                tweet['important_keywords'] = self.detect_important_keywords(tweet['text'])
+                
+                # 根据情感分数确定情感类别
+                if tweet['sentiment_score'] >= self.sentiment_threshold['positive']:
+                    tweet['sentiment'] = 'positive'
+                elif tweet['sentiment_score'] <= self.sentiment_threshold['negative']:
+                    tweet['sentiment'] = 'negative'
+                else:
+                    tweet['sentiment'] = 'neutral'
+            
+            # 计算总体情感分数
+            if recent_tweets:
+                overall_sentiment = sum(tweet['sentiment_score'] for tweet in recent_tweets) / len(recent_tweets)
             else:
-                tweet['sentiment'] = 'neutral'
-        
-        # 计算总体情感分数
-        if recent_tweets:
-            overall_sentiment = sum(tweet['sentiment_score'] for tweet in recent_tweets) / len(recent_tweets)
-        else:
-            overall_sentiment = 0
+                overall_sentiment = 0
+                
+            # 提取常见话题
+            common_topics = self.extract_common_topics(recent_tweets)
             
-        # 提取常见话题
-        common_topics = self.extract_common_topics(recent_tweets)
+            # 找出重要公告
+            important_announcements = [
+                tweet for tweet in recent_tweets 
+                if tweet['important_keywords'] and 
+                (tweet['retweet_count'] > 50 or tweet['favorite_count'] > 100)
+            ]
+            
+            # 整合分析结果
+            analysis_result = {
+                'timestamp': datetime.now(),
+                'total_tweets_analyzed': len(recent_tweets),
+                'overall_sentiment': overall_sentiment,
+                'sentiment_category': self._get_sentiment_category(overall_sentiment),
+                'common_topics': common_topics,
+                'important_announcements': important_announcements[:5],  # 只返回最重要的5条
+                'market_insights': self._generate_market_insights(recent_tweets, overall_sentiment),
+                'recent_tweets': recent_tweets[:10]  # 只返回最新的10条推文
+            }
+            
+            return analysis_result
         
-        # 找出重要公告
-        important_announcements = [
-            tweet for tweet in recent_tweets 
-            if tweet['important_keywords'] and 
-            (tweet['retweet_count'] > 50 or tweet['favorite_count'] > 100)
-        ]
-        
-        # 整合分析结果
-        analysis_result = {
-            'timestamp': datetime.now(),
-            'total_tweets_analyzed': len(recent_tweets),
-            'overall_sentiment': overall_sentiment,
-            'sentiment_category': self._get_sentiment_category(overall_sentiment),
-            'common_topics': common_topics,
-            'important_announcements': important_announcements[:5],  # 只返回最重要的5条
-            'market_insights': self._generate_market_insights(recent_tweets, overall_sentiment),
-            'recent_tweets': recent_tweets[:10]  # 只返回最新的10条推文
-        }
-        
-        return analysis_result
+        except Exception as e:
+            logger.error(f"分析币安推文过程出错: {str(e)}")
+            return self._generate_mock_analysis()
     
     def _generate_mock_analysis(self):
         """
@@ -571,10 +864,13 @@ class SocialMediaAnalyzer:
             "symbols": {}
         }
         
-        # 如果没有初始化Twitter客户端，返回模拟数据
-        if not self.driver:
+        # 如果使用模拟模式或没有初始化Twitter客户端，返回模拟数据
+        if self.simulation_mode or not self.driver:
+            logger.info("使用模拟数据生成社交媒体分析")
+            
             for symbol in self.config.get("symbols", ["BTC/USDT"]):
                 summary["symbols"][symbol] = self._generate_mock_analysis(symbol)
+                
             return summary
         
         # 获取Twitter数据并分析
@@ -593,6 +889,12 @@ class SocialMediaAnalyzer:
                     tweets = self.fetch_tweets(account, count=10)
                     all_tweets.extend(tweets)
                 
+                # 如果无法获取推文，使用模拟数据
+                if not all_tweets:
+                    logger.warning(f"无法获取{symbol}的推文，使用模拟数据")
+                    summary["symbols"][symbol] = self._generate_mock_analysis(symbol)
+                    continue
+                
                 # 分析推文情感
                 sentiment_scores = []
                 important_news = []
@@ -600,16 +902,17 @@ class SocialMediaAnalyzer:
                 
                 for tweet in all_tweets[:20]:  # 只分析前20条推文
                     # 情感分析
-                    sentiment = self.analyze_tweet_sentiment(tweet['text'])
-                    sentiment_scores.append(sentiment['sentiment_score'])
+                    sentiment_score = self.analyze_tweet_sentiment(tweet['text'])
+                    sentiment_scores.append(sentiment_score)
                     
-                    # 提取重要新闻和热门话题
-                    if sentiment['is_important']:
+                    # 检测重要关键词
+                    keywords = self.detect_important_keywords(tweet['text'])
+                    if keywords:
                         important_news.append(tweet['text'][:100] + "...")
                     
                     # 提取关键词
-                    keywords = self.extract_keywords(tweet['text'])
-                    hot_topics.extend(keywords)
+                    words = self._clean_text(tweet['text']).split()
+                    hot_topics.extend([w for w in words if len(w) > 3])
                 
                 # 汇总数据
                 if sentiment_scores:
@@ -633,7 +936,8 @@ class SocialMediaAnalyzer:
                     "market_sentiment": market_sentiment,
                     "important_news": important_news[:3],  # 最多3条重要新闻
                     "hot_topics": popular_topics,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
+                    "is_real_data": True
                 }
             
             return summary

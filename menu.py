@@ -200,17 +200,26 @@ class Menu:
         """显示社交媒体设置菜单"""
         self.show_banner()
         print("🐦 社交媒体设置")
-        print("  1. 连接推特账户")
+        
+        # 显示当前模拟模式设置
+        simulation_mode = os.getenv("SOCIAL_SIMULATION_MODE", "false").lower() in ["true", "1", "yes", "y"]
+        simulation_status = "已启用" if simulation_mode else "已禁用"
+        print(f"\n当前模拟模式: {simulation_status}")
+        
+        print("\n  1. 连接推特账户")
         print("  2. 添加关注账号")
-        print("  3. 返回主菜单")
+        print(f"  3. {'禁用' if simulation_mode else '启用'}模拟模式")
+        print("  4. 返回主菜单")
         print("\n" + "-" * 60)
         
-        choice = self.get_choice(1, 3)
+        choice = self.get_choice(1, 4)
         
         if choice == 1:
             self.set_twitter_account()
         elif choice == 2:
             self.add_twitter_follows()
+        elif choice == 3:
+            self.toggle_simulation_mode()
         else:
             return
     
@@ -305,6 +314,44 @@ class Menu:
         
         input("\n按 Enter 继续...")
     
+    def toggle_simulation_mode(self):
+        """切换社交媒体模拟模式"""
+        self.show_banner()
+        
+        # 获取当前设置
+        current_mode = os.getenv("SOCIAL_SIMULATION_MODE", "false").lower() in ["true", "1", "yes", "y"]
+        status = "已启用" if current_mode else "已禁用"
+        
+        print(f"🔄 社交媒体模拟模式设置 (当前: {status})")
+        print("\n模拟模式说明:")
+        print("  • 启用模拟模式: 生成随机的社交媒体分析数据，不连接真实Twitter")
+        print("  • 禁用模拟模式: 尝试连接真实Twitter账户获取分析数据")
+        print("\n注意: 如果无法连接到Twitter或登录失败，系统会自动使用模拟模式")
+        
+        new_mode = not current_mode
+        new_status = "启用" if new_mode else "禁用"
+        
+        confirm = input(f"\n确定要{new_status}模拟模式吗? (y/n): ").lower()
+        if confirm != 'y':
+            print("\n操作已取消")
+            input("\n按 Enter 继续...")
+            return
+        
+        # 更新设置
+        self.update_env_var("SOCIAL_SIMULATION_MODE", "true" if new_mode else "false")
+        
+        # 更新配置对象
+        if hasattr(config, "SOCIAL_CONFIG"):
+            config.SOCIAL_CONFIG["simulation_mode"] = new_mode
+        
+        print(f"\n✅ 已{new_status}社交媒体模拟模式")
+        
+        if not new_mode:
+            print("\n提示: 系统将在下次分析时尝试连接Twitter")
+            print("若Twitter登录失败，系统会自动切换回模拟模式")
+        
+        input("\n按 Enter 继续...")
+    
     def show_ai_settings_menu(self):
         """显示AI设置菜单"""
         self.show_banner()
@@ -355,15 +402,24 @@ class Menu:
         print("🤖 自动交易设置")
         print("  1. 调整止盈止损线")
         print("  2. 设置交易类别")
-        print("  3. 返回主菜单")
+        print("  3. 设置交易金额")
+        print("  4. 选择交易对")
+        print("  5. 添加自定义交易对")
+        print("  6. 返回主菜单")
         print("\n" + "-" * 60)
         
-        choice = self.get_choice(1, 3)
+        choice = self.get_choice(1, 6)
         
         if choice == 1:
             self.set_stop_levels()
         elif choice == 2:
             self.set_trading_timeframe()
+        elif choice == 3:
+            self.set_trade_amount()
+        elif choice == 4:
+            self.select_trading_pairs()
+        elif choice == 5:
+            self.add_custom_trading_pair()
         else:
             return
     
@@ -453,6 +509,25 @@ class Menu:
         self.update_config_value("TIMEFRAME", selected_timeframe)
         
         print(f"✅ 交易时间周期已设置为 {selected_timeframe}")
+        input("\n按 Enter 继续...")
+    
+    def set_trade_amount(self):
+        """设置交易金额"""
+        self.show_banner()
+        print("💰 设置交易金额")
+        
+        # 显示当前设置
+        current_amount = os.getenv("MAX_TRADE_SIZE", "10")
+        
+        print(f"\n当前交易金额: {current_amount} USDT")
+        
+        # 提示用户输入新的交易金额
+        amount = self.get_float_input("\n请输入新的交易金额 (USDT): ", min_value=1)
+        
+        # 更新配置
+        self.update_env_var("MAX_TRADE_SIZE", str(int(amount)))
+        
+        print(f"\n✅ 交易金额已设置为 {int(amount)} USDT")
         input("\n按 Enter 继续...")
     
     def view_trade_records(self):
@@ -624,6 +699,191 @@ class Menu:
         """更新配置文件中的列表"""
         if hasattr(config, section) and isinstance(getattr(config, section), dict):
             getattr(config, section)[key] = value_list
+
+    def select_trading_pairs(self):
+        """选择默认交易对"""
+        self.show_banner()
+        print("🔄 选择交易对")
+        
+        # 定义默认可选交易对
+        available_pairs = [
+            "BTC/USDT",
+            "ETH/USDT",
+            "BNB/USDT",
+            "DOGE/USDT",
+            "SOL/USDT"
+        ]
+        
+        # 获取当前选择的交易对
+        current_pairs = config.TRADING_PAIRS if hasattr(config, "TRADING_PAIRS") else []
+        
+        print("\n当前选择的交易对:")
+        if current_pairs:
+            for i, pair in enumerate(current_pairs, 1):
+                print(f"  {i}. {pair}")
+        else:
+            print("  未选择任何交易对")
+        
+        print("\n可选的默认交易对:")
+        for i, pair in enumerate(available_pairs, 1):
+            status = "✓" if pair in current_pairs else " "
+            print(f"  {i}. [{status}] {pair}")
+        
+        print("\n选择操作:")
+        print("  1. 添加交易对")
+        print("  2. 移除交易对")
+        print("  3. 返回上级菜单")
+        
+        choice = self.get_choice(1, 3)
+        
+        if choice == 3:
+            return
+        
+        if choice == 1:
+            # 添加交易对
+            print("\n请选择要添加的交易对 (输入数字，多个用逗号分隔):")
+            selection = input("> ")
+            
+            try:
+                # 解析用户输入
+                indices = [int(x.strip()) for x in selection.split(",")]
+                
+                # 验证索引范围
+                valid_indices = [i for i in indices if 1 <= i <= len(available_pairs)]
+                
+                if not valid_indices:
+                    print("❌ 无效的选择")
+                    input("\n按 Enter 继续...")
+                    return
+                
+                # 添加选择的交易对
+                selected_pairs = [available_pairs[i-1] for i in valid_indices]
+                updated_pairs = list(set(current_pairs + selected_pairs))
+                
+                # 更新配置
+                config.TRADING_PAIRS = updated_pairs
+                
+                added_pairs = [pair for pair in selected_pairs if pair not in current_pairs]
+                if added_pairs:
+                    print(f"\n✅ 已添加交易对: {', '.join(added_pairs)}")
+                else:
+                    print("\nℹ️ 选择的交易对已在列表中")
+            
+            except ValueError:
+                print("❌ 无效的输入，请输入数字")
+        
+        elif choice == 2:
+            # 移除交易对
+            if not current_pairs:
+                print("\nℹ️ 当前没有选择的交易对")
+                input("\n按 Enter 继续...")
+                return
+            
+            print("\n请选择要移除的交易对 (输入数字，多个用逗号分隔):")
+            for i, pair in enumerate(current_pairs, 1):
+                print(f"  {i}. {pair}")
+            
+            selection = input("> ")
+            
+            try:
+                # 解析用户输入
+                indices = [int(x.strip()) for x in selection.split(",")]
+                
+                # 验证索引范围
+                valid_indices = [i for i in indices if 1 <= i <= len(current_pairs)]
+                
+                if not valid_indices:
+                    print("❌ 无效的选择")
+                    input("\n按 Enter 继续...")
+                    return
+                
+                # 移除选择的交易对
+                pairs_to_remove = [current_pairs[i-1] for i in valid_indices]
+                updated_pairs = [pair for pair in current_pairs if pair not in pairs_to_remove]
+                
+                # 更新配置
+                config.TRADING_PAIRS = updated_pairs
+                
+                print(f"\n✅ 已移除交易对: {', '.join(pairs_to_remove)}")
+            
+            except ValueError:
+                print("❌ 无效的输入，请输入数字")
+        
+        input("\n按 Enter 继续...")
+
+    def add_custom_trading_pair(self):
+        """添加自定义交易对"""
+        self.show_banner()
+        print("➕ 添加自定义交易对")
+        
+        # 获取当前选择的交易对
+        current_pairs = config.TRADING_PAIRS if hasattr(config, "TRADING_PAIRS") else []
+        
+        print("\n当前选择的交易对:")
+        if current_pairs:
+            for i, pair in enumerate(current_pairs, 1):
+                print(f"  {i}. {pair}")
+        else:
+            print("  未选择任何交易对")
+        
+        print("\n请输入要添加的自定义交易对，格式为: 币种/计价币 (例如: PEPE/USDC)")
+        print("可以一次输入多个交易对，用逗号分隔 (例如: PEPE/USDC, SHIB/USDT)")
+        print("注意: 请确保交易对在交易所中存在，否则交易将失败")
+        
+        custom_pairs = input("\n> ")
+        
+        if not custom_pairs.strip():
+            print("❌ 输入为空，未添加任何交易对")
+            input("\n按 Enter 继续...")
+            return
+        
+        # 解析用户输入
+        pairs_list = [pair.strip() for pair in custom_pairs.split(",")]
+        valid_pairs = []
+        
+        # 验证交易对格式
+        for pair in pairs_list:
+            # 检查基本格式
+            if '/' in pair:
+                base, quote = pair.split('/')
+                if base and quote:
+                    valid_pairs.append(pair.upper())  # 转换为大写
+                else:
+                    print(f"❌ 无效交易对格式: {pair}")
+            else:
+                print(f"❌ 无效交易对格式: {pair} (缺少 '/' 分隔符)")
+        
+        if not valid_pairs:
+            print("❌ 未提供有效的交易对")
+            input("\n按 Enter 继续...")
+            return
+        
+        # 确认添加
+        print("\n将添加以下交易对:")
+        for pair in valid_pairs:
+            print(f"  • {pair}")
+        
+        confirm = input("\n确认添加这些交易对? (y/n): ").lower()
+        if confirm != 'y':
+            print("\n❌ 操作已取消")
+            input("\n按 Enter 继续...")
+            return
+        
+        # 添加新交易对并去重
+        updated_pairs = list(set(current_pairs + valid_pairs))
+        
+        # 更新配置
+        config.TRADING_PAIRS = updated_pairs
+        
+        # 获取实际添加的交易对（过滤掉已存在的）
+        added_pairs = [pair for pair in valid_pairs if pair not in current_pairs]
+        
+        if added_pairs:
+            print(f"\n✅ 已添加交易对: {', '.join(added_pairs)}")
+        else:
+            print("\nℹ️ 所有交易对已在列表中")
+        
+        input("\n按 Enter 继续...")
 
     def run(self):
         """运行菜单"""

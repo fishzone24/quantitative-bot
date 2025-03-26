@@ -51,23 +51,35 @@ TA_CONFIG = {
     }
 }
 
-# 社交媒体分析参数
+# 社交媒体分析配置
 SOCIAL_CONFIG = {
+    # Twitter账号列表
     "twitter_accounts": [
         "binance",
         "cz_binance",
         "BinanceResearch",
-        "okx",
+        "Bitcoin",
+        "crypto"
     ],
+    # 重要关键词列表
     "important_keywords": [
-        "listing", "partnership", "update", "maintenance",
-        "halting", "suspend", "announcement", "launch",
-        "airdrop", "burn", "fork", "upgrade"
+        "listing",
+        "launch",
+        "announcement",
+        "partnership",
+        "release",
+        "upgrade",
+        "update",
+        "burn",
+        "halving"
     ],
+    # 情感分析阈值
     "sentiment_threshold": {
-        "positive": 0.6,
+        "positive": 0.4,
         "negative": -0.3
-    }
+    },
+    # 模拟模式 - 无法访问Twitter API时自动启用
+    "simulation_mode": False
 }
 
 # AI决策系统参数

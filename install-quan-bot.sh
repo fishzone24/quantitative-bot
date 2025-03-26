@@ -28,7 +28,6 @@ if [ -d ~/crypto-quant-trader ]; then
     rm -rf ~/crypto-quant-trader
 fi
 mkdir -p ~/crypto-quant-trader
-cd ~/crypto-quant-trader
 
 # 询问是否从GitHub克隆
 echo -e "${YELLOW}您希望如何获取代码?${NC}"
@@ -45,6 +44,7 @@ if [ "$clone_choice" = "1" ]; then
     
     # 克隆代码库
     echo -e "${YELLOW}正在从GitHub克隆代码...${NC}"
+    cd ~/crypto-quant-trader
     git clone https://github.com/fishzone24/quantitative-bot.git .
     
     if [ $? -ne 0 ]; then
@@ -53,6 +53,7 @@ if [ "$clone_choice" = "1" ]; then
     fi
 else
     echo -e "${GREEN}使用当前目录的代码继续安装。${NC}"
+    cd ~/crypto-quant-trader
 fi
 
 # 创建并激活虚拟环境

@@ -51,7 +51,7 @@
 如果您使用Ubuntu系统，可以使用我们提供的一键安装脚本快速部署：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install-quan-bot.sh -o install-quan-bot.sh && chmod +x install-quan-bot.sh && ./install-quan-bot.sh
+curl -fsSL "https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install-quan-bot.sh?t=$(date +%s)" -o install-quan-bot.sh && chmod +x install-quan-bot.sh && ./install-quan-bot.sh
 ```
 
 此命令将自动完成所有安装步骤，包括：

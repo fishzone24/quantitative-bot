@@ -2,7 +2,7 @@ import os
 import ccxt
 import logging
 from binance.client import Client as BinanceClient
-from okx.v5 import account_api, market_api, trade_api
+from okx import Account, Market, Trade
 
 # 设置日志
 logging.basicConfig(
@@ -270,19 +270,19 @@ class OKXExchangeClient(ExchangeClient):
             flag = "1"  # 测试模式
             
         # 初始化OKX API客户端
-        self.account_api = account_api.AccountAPI(
+        self.account_api = Account(
             api_key=self.api_key,
             api_secret_key=self.api_secret,
             passphrase=self.passphrase,
             flag=flag
         )
-        self.market_api = market_api.MarketAPI(
+        self.market_api = Market(
             api_key=self.api_key,
             api_secret_key=self.api_secret,
             passphrase=self.passphrase,
             flag=flag
         )
-        self.trade_api = trade_api.TradeAPI(
+        self.trade_api = Trade(
             api_key=self.api_key,
             api_secret_key=self.api_secret,
             passphrase=self.passphrase,

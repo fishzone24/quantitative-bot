@@ -16,24 +16,24 @@
 方法一：使用curl直接下载并执行安装脚本（推荐）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install.sh -o install.sh && chmod +x install.sh && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install-quan-bot.sh -o install-quan-bot.sh && chmod +x install-quan-bot.sh && ./install-quan-bot.sh
 ```
 
 方法二：逐步手动安装：
 
 1. 下载安装脚本：
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/fishzone24/quantitative-bot/main/install-quan-bot.sh -o install-quan-bot.sh
 ```
 
 2. 给脚本添加执行权限：
 ```bash
-chmod +x install.sh
+chmod +x install-quan-bot.sh
 ```
 
 3. 运行安装脚本：
 ```bash
-./install.sh
+./install-quan-bot.sh
 ```
 
 安装过程中，脚本将引导您：

@@ -102,21 +102,37 @@ echo -e "${YELLOW}正在创建Python虚拟环境...${NC}"
 python3 -m venv venv
 source venv/bin/activate
 
+# 检查Python版本
+echo -e "${YELLOW}检查Python版本...${NC}"
+py_version=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+echo -e "${GREEN}Python版本: ${py_version}${NC}"
+
 # 安装依赖
 echo -e "${YELLOW}安装依赖...${NC}"
-pip install -r requirements.txt --no-cache-dir --only-binary=pandas
-
-# 如果pandas安装失败，尝试替代方案
-if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}标准安装失败，尝试替代安装方法...${NC}"
+if [[ "$py_version" == "3.12" ]]; then
+    echo -e "${YELLOW}检测到Python 3.12，使用兼容性设置...${NC}"
+    # Python 3.12特定的依赖安装
     pip install wheel
-    pip install pandas==2.0.3 --only-binary=pandas
-    pip install -r requirements.txt --no-deps
+    pip install numpy matplotlib 
+    pip install pandas>=2.1.1 scipy>=1.11.0
+    # 安装其他依赖，但排除已安装的包
+    grep -v "pandas\|numpy\|matplotlib\|scipy\|ta-lib-python" requirements.txt > temp_requirements.txt
+    pip install -r temp_requirements.txt
+    rm temp_requirements.txt
+else
+    # 标准安装方式
+    pip install -r requirements.txt --no-cache-dir
 fi
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}依赖安装失败，请检查错误信息。${NC}"
-    exit 1
+    echo -e "${YELLOW}标准安装失败，尝试替代安装方法...${NC}"
+    pip install wheel
+    pip install numpy pandas>=2.1.1 matplotlib scipy>=1.11.0
+    pip install ccxt python-binance okx
+    pip install selenium webdriver-manager textblob nltk
+    pip install requests json5 python-dotenv
+    pip install pandas-ta scikit-learn
+    pip install tqdm colorama
 fi
 
 # 设置环境变量

@@ -4,13 +4,13 @@ python-binance==1.0.17
 okx==2.1.2
 
 # 数据分析
-pandas==2.0.3
+pandas>=2.1.1
 numpy>=1.24.0
 matplotlib>=3.7.0
-scipy>=1.10.0
+scipy>=1.11.0
 
 # 技术分析
-ta-lib-python>=0.4.24
+# ta-lib-python>=0.4.24  # 不兼容Python 3.12，使用pandas-ta替代
 pandas-ta==0.3.14b0
 
 # 机器学习

@@ -113,4 +113,46 @@ chromium --version
 
 ## 其他问题
 
-如果遇到其他问题，请参考详细的错误日志，或联系开发者提供支持。 
+如果遇到其他问题，请参考详细的错误日志，或联系开发者提供支持。
+
+# Python 3.12特定问题
+
+如果您使用的是Python 3.12，可能会遇到一些依赖库尚未完全兼容的问题。以下是处理这些问题的建议：
+
+## pandas兼容问题
+
+在Python 3.12中，您需要使用pandas 2.1.1或更高版本：
+
+```bash
+pip install pandas>=2.1.1
+```
+
+## scipy兼容问题
+
+在Python 3.12中，您需要使用scipy 1.11.0或更高版本：
+
+```bash
+pip install scipy>=1.11.0
+```
+
+## ta-lib不可用问题
+
+ta-lib-python目前不支持Python 3.12，您可以使用pandas-ta作为替代：
+
+```bash
+pip install pandas-ta==0.3.14b0
+```
+
+## 完整的替代安装方案
+
+如果您使用Python 3.12并遇到依赖问题，可以尝试以下命令进行逐个安装：
+
+```bash
+pip install wheel
+pip install numpy pandas>=2.1.1 matplotlib scipy>=1.11.0
+pip install ccxt python-binance okx
+pip install selenium webdriver-manager textblob nltk
+pip install requests json5 python-dotenv
+pip install pandas-ta scikit-learn
+pip install tqdm colorama
+``` 

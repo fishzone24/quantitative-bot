@@ -289,4 +289,34 @@ class ExchangeClient:
             
         except Exception as e:
             logger.error(f"获取交易历史失败: {str(e)}")
+            return []
+    
+    def get_open_orders(self, symbol: str) -> List[Dict]:
+        """
+        获取未完成订单
+        
+        Args:
+            symbol: 交易对名称
+            
+        Returns:
+            List[Dict]: 未完成订单列表
+        """
+        try:
+            if self.exchange_name == "binance":
+                orders = self.client.get_open_orders(symbol=symbol)
+            elif self.exchange_name == "okx":
+                orders = self.trade_api.get_order_list(
+                    instId=symbol,
+                    state="live"
+                )
+                if 'data' in orders:
+                    return orders['data']
+                return []
+            else:
+                raise ValueError(f"不支持的交易所: {self.exchange_name}")
+            
+            return orders
+            
+        except Exception as e:
+            logger.error(f"获取未完成订单失败: {str(e)}")
             return [] 

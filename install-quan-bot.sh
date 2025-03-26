@@ -103,9 +103,16 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 安装依赖
-echo -e "${YELLOW}正在安装依赖...${NC}"
-pip install --upgrade pip
-pip install -r requirements.txt
+echo -e "${YELLOW}安装依赖...${NC}"
+pip install -r requirements.txt --no-cache-dir --only-binary=pandas
+
+# 如果pandas安装失败，尝试替代方案
+if [ $? -ne 0 ]; then
+    echo -e "${YELLOW}标准安装失败，尝试替代安装方法...${NC}"
+    pip install wheel
+    pip install pandas==2.0.3 --only-binary=pandas
+    pip install -r requirements.txt --no-deps
+fi
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}依赖安装失败，请检查错误信息。${NC}"

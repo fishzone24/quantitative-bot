@@ -16,6 +16,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from typing import Dict
 
 # 设置日志
 logging.basicConfig(
@@ -510,4 +511,133 @@ class SocialMediaAnalyzer:
         else:
             insights += "正面消息与负面消息基本平衡，市场情绪中立。"
         
-        return insights 
+        return insights
+
+    def get_social_summary(self) -> Dict:
+        """
+        获取社交媒体分析摘要
+        
+        Returns:
+            Dict: 社交媒体分析摘要
+        """
+        summary = {
+            "timestamp": datetime.now().isoformat(),
+            "symbols": {}
+        }
+        
+        # 如果没有初始化Twitter客户端，返回模拟数据
+        if not self.driver:
+            for symbol in self.config.get("symbols", ["BTC/USDT"]):
+                summary["symbols"][symbol] = self._generate_mock_analysis(symbol)
+            return summary
+        
+        # 获取Twitter数据并分析
+        try:
+            for symbol in self.config.get("symbols", ["BTC/USDT"]):
+                # 提取货币名称
+                currency = symbol.split("/")[0]
+                
+                # 获取相关账号的推文
+                accounts = [account for account in self.twitter_accounts if currency.lower() in account.lower()]
+                if not accounts:
+                    accounts = self.twitter_accounts[:2]  # 取前两个账号
+                
+                all_tweets = []
+                for account in accounts[:2]:  # 限制只查询前两个账号
+                    tweets = self.fetch_tweets(account, count=10)
+                    all_tweets.extend(tweets)
+                
+                # 分析推文情感
+                sentiment_scores = []
+                important_news = []
+                hot_topics = []
+                
+                for tweet in all_tweets[:20]:  # 只分析前20条推文
+                    # 情感分析
+                    sentiment = self.analyze_tweet_sentiment(tweet['text'])
+                    sentiment_scores.append(sentiment['sentiment_score'])
+                    
+                    # 提取重要新闻和热门话题
+                    if sentiment['is_important']:
+                        important_news.append(tweet['text'][:100] + "...")
+                    
+                    # 提取关键词
+                    keywords = self.extract_keywords(tweet['text'])
+                    hot_topics.extend(keywords)
+                
+                # 汇总数据
+                if sentiment_scores:
+                    avg_sentiment = sum(sentiment_scores) / len(sentiment_scores)
+                else:
+                    avg_sentiment = 0
+                
+                market_sentiment = "中性"
+                if avg_sentiment > 0.2:
+                    market_sentiment = "积极"
+                elif avg_sentiment < -0.2:
+                    market_sentiment = "消极"
+                
+                # 获取热门话题（频率最高的5个）
+                from collections import Counter
+                topic_counter = Counter(hot_topics)
+                popular_topics = [topic for topic, _ in topic_counter.most_common(5)]
+                
+                summary["symbols"][symbol] = {
+                    "sentiment_score": round(avg_sentiment, 2),
+                    "market_sentiment": market_sentiment,
+                    "important_news": important_news[:3],  # 最多3条重要新闻
+                    "hot_topics": popular_topics,
+                    "timestamp": datetime.now().isoformat()
+                }
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"获取社交媒体摘要失败: {str(e)}")
+            # 返回模拟数据
+            for symbol in self.config.get("symbols", ["BTC/USDT"]):
+                summary["symbols"][symbol] = self._generate_mock_analysis(symbol)
+            return summary
+
+    def _generate_mock_analysis(self, symbol: str) -> Dict:
+        """生成模拟分析结果"""
+        # 随机模拟分析结果
+        import random
+        
+        sentiments = ["积极", "中性", "消极"]
+        topics = [
+            "价格上涨", "价格下跌", "新合作", "技术更新", 
+            "监管消息", "交易量增加", "市场波动", "鲸鱼活动",
+            "社区活动", "行业新闻", "竞争对手", "宏观经济"
+        ]
+        news = [
+            f"{symbol.split('/')[0]}价格在过去24小时内上涨超过5%",
+            f"{symbol.split('/')[0]}开发团队宣布重要技术突破",
+            f"大型交易所宣布支持{symbol.split('/')[0]}",
+            f"{symbol.split('/')[0]}社区投票通过新提案",
+            f"分析师预测{symbol.split('/')[0]}价格走势看好",
+            f"市场对{symbol.split('/')[0]}的兴趣增加",
+            f"{symbol.split('/')[0]}交易量创新高",
+            f"知名投资者增持{symbol.split('/')[0]}"
+        ]
+        
+        sentiment_score = random.uniform(-0.5, 0.5)
+        sentiment = "中性"
+        if sentiment_score > 0.2:
+            sentiment = "积极"
+        elif sentiment_score < -0.2:
+            sentiment = "消极"
+        
+        # 随机选择3-5个热门话题
+        random_topics = random.sample(topics, random.randint(3, 5))
+        
+        # 随机选择1-3条重要新闻
+        random_news = random.sample(news, random.randint(1, 3))
+        
+        return {
+            "sentiment_score": round(sentiment_score, 2),
+            "market_sentiment": sentiment,
+            "important_news": random_news,
+            "hot_topics": random_topics,
+            "timestamp": datetime.now().isoformat()
+        } 

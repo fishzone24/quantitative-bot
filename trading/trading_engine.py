@@ -47,6 +47,11 @@ class TradingEngine:
             Dict: 交易结果
         """
         try:
+            # 对币安API，需要将BTC/USDT转换为BTCUSDT格式
+            api_symbol = symbol
+            if self.exchange_name == "binance" and "/" in symbol:
+                api_symbol = symbol.replace("/", "")
+            
             # 检查余额
             balance = self.exchange.get_balance()
             if balance < quantity:
@@ -54,13 +59,13 @@ class TradingEngine:
                 return {"status": "ERROR", "message": "余额不足"}
             
             # 下单
-            order = self.exchange.place_order(symbol, side, quantity, order_type)
+            order = self.exchange.place_order(api_symbol, side, quantity, order_type)
             if not order:
                 return {"status": "ERROR", "message": "下单失败"}
             
             # 设置止盈止损
             if side == "BUY":
-                self._set_take_profit_stop_loss(symbol, order['orderId'], order['price'])
+                self._set_take_profit_stop_loss(api_symbol, order['orderId'], order['price'])
             
             return {"status": "SUCCESS", "order": order}
             

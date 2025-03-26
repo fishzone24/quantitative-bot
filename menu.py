@@ -509,6 +509,39 @@ class Menu:
         if hasattr(config, section) and isinstance(getattr(config, section), dict):
             getattr(config, section)[key] = value_list
 
+    def run(self):
+        """运行菜单"""
+        while True:
+            self.show_main_menu()
+            choice = input("\n请输入您的选择 [0-9]: ")
+            
+            if choice == '0':
+                print("退出程序")
+                break
+            elif choice == '1':
+                self.show_dashboard()
+            elif choice == '2':
+                self.set_exchange_api()
+            elif choice == '3':
+                self.set_trading_settings()
+            elif choice == '4':
+                self.set_twitter_account()
+            elif choice == '5':
+                self.set_ai_settings()
+            elif choice == '6':
+                self.set_notification()
+            elif choice == '7':
+                self.run_analysis()
+            elif choice == '8':
+                self.start_trading()
+            elif choice == '9':
+                self.view_logs()
+            else:
+                print("❌ 无效的选择，请重试")
+            
+            # 每次操作后暂停
+            input("\n按 Enter 继续...")
+
 # 主菜单循环
 def run_menu():
     """运行菜单系统"""

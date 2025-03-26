@@ -107,9 +107,17 @@ class ExchangeClient:
         """
         try:
             if self.exchange_name == "binance":
+                # 确保币安格式正确（BTCUSDT，不含/）
+                if "/" in symbol:
+                    symbol = symbol.replace("/", "")
+                    
                 ticker = self.client.get_symbol_ticker(symbol=symbol)
                 return float(ticker['price'])
             elif self.exchange_name == "okx":
+                # OKX格式使用 BTC-USDT
+                if "/" in symbol:
+                    symbol = symbol.replace("/", "-")
+                    
                 ticker = self.market_api.get_ticker(instId=symbol)
                 return float(ticker['data'][0]['last'])
             else:
@@ -133,6 +141,10 @@ class ExchangeClient:
         """
         try:
             if self.exchange_name == "binance":
+                # 确保币安格式正确（BTCUSDT，不含/）
+                if "/" in symbol:
+                    symbol = symbol.replace("/", "")
+                    
                 klines = self.client.get_klines(
                     symbol=symbol,
                     interval=interval,
@@ -144,6 +156,10 @@ class ExchangeClient:
                     'taker_buy_quote', 'ignore'
                 ])
             elif self.exchange_name == "okx":
+                # OKX格式使用 BTC-USDT
+                if "/" in symbol:
+                    symbol = symbol.replace("/", "-")
+                    
                 klines = self.market_api.get_candlesticks(
                     instId=symbol,
                     bar=interval,

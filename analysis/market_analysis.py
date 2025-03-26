@@ -46,8 +46,13 @@ class MarketAnalyzer:
             Dict: 分析结果
         """
         try:
+            # 对币安API，需要将BTC/USDT转换为BTCUSDT格式
+            api_symbol = symbol
+            if self.exchange_name == "binance" and "/" in symbol:
+                api_symbol = symbol.replace("/", "")
+            
             # 获取K线数据
-            klines = self.exchange.get_klines(symbol, timeframe)
+            klines = self.exchange.get_klines(api_symbol, timeframe)
             if klines.empty:
                 logger.error(f"获取{symbol} K线数据失败")
                 return {}
@@ -59,7 +64,7 @@ class MarketAnalyzer:
             signals = self._generate_signals(indicators)
             
             # 获取当前价格
-            current_price = self.exchange.get_symbol_price(symbol)
+            current_price = self.exchange.get_symbol_price(api_symbol)
             
             return {
                 "symbol": symbol,

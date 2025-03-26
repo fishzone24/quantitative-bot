@@ -1,1 +1,7 @@
-# trading module initialization 
+"""
+交易模块
+"""
+
+from .trading_engine import TradingEngine
+
+__all__ = ['TradingEngine'] 

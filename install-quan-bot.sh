@@ -21,6 +21,33 @@ else
     echo -e "${GREEN}检测到Python3: $(python3 --version)${NC}"
 fi
 
+if ! command -v pip3 &> /dev/null; then
+    echo -e "${RED}未检测到pip3，请先安装pip3${NC}"
+    exit 1
+fi
+
+# 安装Chrome浏览器
+echo -e "${YELLOW}安装Chrome浏览器...${NC}"
+if [ -f /etc/debian_version ]; then
+    # Debian/Ubuntu系统
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+    sudo apt-get update
+    sudo apt-get install -y google-chrome-stable
+elif [ -f /etc/redhat-release ]; then
+    # CentOS/RHEL系统
+    sudo dnf install -y chromium chromium-headless chromium-libs
+else
+    echo -e "${RED}不支持的操作系统${NC}"
+    exit 1
+fi
+
+# 检查Chrome安装
+if ! command -v google-chrome &> /dev/null && ! command -v chromium &> /dev/null; then
+    echo -e "${RED}Chrome浏览器安装失败${NC}"
+    exit 1
+fi
+
 # 创建项目目录
 echo -e "${YELLOW}创建项目目录...${NC}"
 if [ -d ~/crypto-quant-trader ]; then

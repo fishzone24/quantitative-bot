@@ -177,17 +177,11 @@ class Menu:
         self.show_banner()
         print("🐦 连接推特账户")
         
-        api_key = self.get_string_input("请输入 Twitter API Key: ")
-        api_secret = self.get_string_input("请输入 Twitter API Secret: ")
-        access_token = self.get_string_input("请输入 Twitter Access Token: ")
-        access_secret = self.get_string_input("请输入 Twitter Access Secret: ")
-        bearer_token = self.get_string_input("请输入 Twitter Bearer Token: ")
+        email = self.get_string_input("请输入推特邮箱: ")
+        password = self.get_string_input("请输入推特密码: ")
         
-        self.update_env_var("TWITTER_API_KEY", api_key)
-        self.update_env_var("TWITTER_API_SECRET", api_secret)
-        self.update_env_var("TWITTER_ACCESS_TOKEN", access_token)
-        self.update_env_var("TWITTER_ACCESS_SECRET", access_secret)
-        self.update_env_var("TWITTER_BEARER_TOKEN", bearer_token)
+        self.update_env_var("TWITTER_EMAIL", email)
+        self.update_env_var("TWITTER_PASSWORD", password)
         
         print("✅ 推特账户信息已更新")
         input("\n按 Enter 继续...")

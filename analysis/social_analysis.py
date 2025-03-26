@@ -1,4 +1,3 @@
-import tweepy
 import pandas as pd
 import numpy as np
 import logging
@@ -10,6 +9,13 @@ import nltk
 from nltk.tokenize import word_tokenize
 from collections import Counter
 import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 # 设置日志
 logging.basicConfig(
@@ -43,39 +49,67 @@ class SocialMediaAnalyzer:
             "negative": -0.3
         })
         
-        # 初始化Twitter API
-        self.twitter_api = None
-        self.init_twitter_api()
+        # 初始化Twitter登录
+        self.driver = None
+        self.init_twitter_login()
         
         logger.info("初始化社交媒体分析模块")
     
-    def init_twitter_api(self):
-        """初始化Twitter API"""
+    def init_twitter_login(self):
+        """初始化Twitter登录"""
         try:
-            # 获取Twitter API凭证
-            api_key = os.getenv("TWITTER_API_KEY")
-            api_secret = os.getenv("TWITTER_API_SECRET")
-            access_token = os.getenv("TWITTER_ACCESS_TOKEN")
-            access_secret = os.getenv("TWITTER_ACCESS_SECRET")
-            bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
+            # 获取Twitter登录凭证
+            email = os.getenv("TWITTER_EMAIL")
+            password = os.getenv("TWITTER_PASSWORD")
             
-            if not all([api_key, api_secret, access_token, access_secret]):
-                logger.warning("Twitter API凭证不完整，社交媒体分析将被禁用")
+            if not email or not password:
+                logger.warning("Twitter登录凭证不完整，社交媒体分析将被禁用")
                 return
             
-            # 设置Twitter API客户端
-            auth = tweepy.OAuth1UserHandler(
-                api_key, api_secret, access_token, access_secret
-            )
-            self.twitter_api = tweepy.API(auth)
+            # 设置Chrome选项
+            chrome_options = Options()
+            chrome_options.add_argument("--headless")  # 无头模式
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
             
-            # 测试API连接
-            self.twitter_api.verify_credentials()
-            logger.info("Twitter API连接成功")
+            # 初始化WebDriver
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            
+            # 登录Twitter
+            self._login_twitter(email, password)
+            logger.info("Twitter登录成功")
             
         except Exception as e:
-            logger.error(f"初始化Twitter API失败: {str(e)}")
-            self.twitter_api = None
+            logger.error(f"初始化Twitter登录失败: {str(e)}")
+            self.driver = None
+    
+    def _login_twitter(self, email, password):
+        """登录Twitter"""
+        try:
+            # 访问Twitter登录页面
+            self.driver.get("https://twitter.com/login")
+            time.sleep(3)  # 等待页面加载
+            
+            # 输入邮箱
+            email_input = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.NAME, "text"))
+            )
+            email_input.send_keys(email)
+            self.driver.find_element(By.XPATH, "//span[text()='Next']").click()
+            time.sleep(2)
+            
+            # 输入密码
+            password_input = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.NAME, "password"))
+            )
+            password_input.send_keys(password)
+            self.driver.find_element(By.XPATH, "//span[text()='Log in']").click()
+            time.sleep(3)
+            
+        except Exception as e:
+            logger.error(f"Twitter登录失败: {str(e)}")
+            raise
     
     def fetch_tweets(self, account_name, count=100):
         """
@@ -88,38 +122,79 @@ class SocialMediaAnalyzer:
         Returns:
             list: 推文列表
         """
-        if not self.twitter_api:
-            logger.warning("Twitter API未初始化，无法获取推文")
+        if not self.driver:
+            logger.warning("Twitter未登录，无法获取推文")
             return []
             
         try:
-            # 获取用户最新推文
-            tweets = self.twitter_api.user_timeline(
-                screen_name=account_name,
-                count=count,
-                include_rts=False,  # 不包括转发
-                tweet_mode="extended"  # 获取完整文本
-            )
+            # 访问用户主页
+            self.driver.get(f"https://twitter.com/{account_name}")
+            time.sleep(3)
+            
+            # 获取推文
+            tweets = []
+            last_height = self.driver.execute_script("return document.body.scrollHeight")
+            
+            while len(tweets) < count:
+                # 获取当前页面的推文
+                tweet_elements = self.driver.find_elements(By.CSS_SELECTOR, "article[data-testid='tweet']")
+                
+                for tweet in tweet_elements:
+                    try:
+                        # 获取推文文本
+                        text = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='tweetText']").text
+                        
+                        # 获取时间
+                        time_element = tweet.find_element(By.TAG_NAME, "time")
+                        created_at = datetime.fromisoformat(time_element.get_attribute("datetime"))
+                        
+                        # 获取互动数据
+                        try:
+                            favorite_count = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='like']").text
+                        except:
+                            favorite_count = "0"
+                            
+                        try:
+                            retweet_count = tweet.find_element(By.CSS_SELECTOR, "div[data-testid='retweet']").text
+                        except:
+                            retweet_count = "0"
+                        
+                        tweets.append({
+                            'id': str(len(tweets) + 1),
+                            'text': text,
+                            'created_at': created_at,
+                            'user': account_name,
+                            'favorite_count': int(favorite_count) if favorite_count.isdigit() else 0,
+                            'retweet_count': int(retweet_count) if retweet_count.isdigit() else 0
+                        })
+                        
+                        if len(tweets) >= count:
+                            break
+                            
+                    except Exception as e:
+                        logger.warning(f"解析推文失败: {str(e)}")
+                        continue
+                
+                # 滚动到页面底部
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(2)
+                
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break
+                last_height = new_height
             
             logger.info(f"已获取{len(tweets)}条{account_name}的推文")
-            
-            # 格式化推文数据
-            formatted_tweets = []
-            for tweet in tweets:
-                formatted_tweets.append({
-                    'id': tweet.id_str,
-                    'text': tweet.full_text,
-                    'created_at': tweet.created_at,
-                    'user': tweet.user.screen_name,
-                    'favorite_count': tweet.favorite_count,
-                    'retweet_count': tweet.retweet_count
-                })
-            
-            return formatted_tweets
+            return tweets
             
         except Exception as e:
             logger.error(f"获取{account_name}的推文失败: {str(e)}")
             return []
+    
+    def __del__(self):
+        """清理资源"""
+        if self.driver:
+            self.driver.quit()
     
     def analyze_tweet_sentiment(self, tweet_text):
         """
@@ -239,8 +314,8 @@ class SocialMediaAnalyzer:
         Returns:
             dict: 分析结果
         """
-        if not self.twitter_api:
-            logger.warning("Twitter API未初始化，无法分析币安推文")
+        if not self.driver:
+            logger.warning("Twitter未登录，无法分析币安推文")
             return self._generate_mock_analysis()
             
         all_tweets = []

@@ -9,7 +9,8 @@ numpy==1.24.4
 ta==0.10.2  # 技术分析库
 
 # 社交媒体分析
-tweepy==4.14.0
+selenium==4.18.1
+webdriver-manager==4.0.1
 textblob==0.17.1  # 情感分析
 nltk==3.8.1
 

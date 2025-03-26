@@ -1,7 +1,7 @@
 # 交易所API
 ccxt==3.1.54
 python-binance==1.0.17
-okx==0.5.0
+okx==2.1.2
 
 # 数据处理和分析
 pandas==2.1.0

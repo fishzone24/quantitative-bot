@@ -67,19 +67,65 @@ class SocialMediaAnalyzer:
                 logger.warning("Twitter登录凭证不完整，社交媒体分析将被禁用")
                 return
             
-            # 设置Chrome选项
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")  # 无头模式
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            
-            # 初始化WebDriver
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            
-            # 登录Twitter
-            self._login_twitter(email, password)
-            logger.info("Twitter登录成功")
+            try:
+                # 设置Chrome选项
+                chrome_options = Options()
+                chrome_options.add_argument("--headless")  # 无头模式
+                chrome_options.add_argument("--no-sandbox")
+                chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--disable-gpu")
+                
+                # 兼容Linux环境
+                chrome_options.add_argument("--disable-extensions")
+                chrome_options.add_argument("--disable-software-rasterizer")
+                
+                # 尝试使用直接的ChromeDriver路径
+                try:
+                    # 首先检查系统是否安装了Chrome浏览器
+                    if os.system("which google-chrome") == 0:
+                        version_cmd = "google-chrome --version"
+                        version = os.popen(version_cmd).read().strip().split()[-1]
+                        logger.info(f"检测到Chrome版本: {version}")
+                    elif os.system("which chromium-browser") == 0:
+                        version_cmd = "chromium-browser --version"
+                        version = os.popen(version_cmd).read().strip().split()[-1]
+                        logger.info(f"检测到Chromium版本: {version}")
+                    else:
+                        logger.warning("未检测到Chrome或Chromium浏览器")
+                    
+                    # 尝试直接使用系统Chrome
+                    self.driver = webdriver.Chrome(options=chrome_options)
+                except Exception as e1:
+                    logger.warning(f"直接初始化Chrome失败: {str(e1)}，尝试使用webdriver-manager")
+                    
+                    # 尝试使用webdriver-manager
+                    try:
+                        # 避免使用缓存目录，直接下载到当前目录
+                        os.environ["WDM_LOCAL"] = "1"
+                        
+                        from webdriver_manager.chrome import ChromeDriverManager
+                        driver_path = ChromeDriverManager().install()
+                        
+                        # 确保驱动程序有执行权限
+                        os.system(f"chmod +x {driver_path}")
+                        
+                        service = Service(driver_path)
+                        self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                    except Exception as e2:
+                        logger.error(f"使用webdriver-manager初始化Chrome失败: {str(e2)}")
+                        
+                        # 最后尝试使用模拟分析
+                        logger.warning("无法初始化浏览器，将使用模拟社交媒体分析")
+                        self.driver = None
+                        return
+                
+                # 登录Twitter
+                self._login_twitter(email, password)
+                logger.info("Twitter登录成功")
+                
+            except Exception as e:
+                logger.error(f"初始化Twitter浏览器失败: {str(e)}")
+                self.driver = None
             
         except Exception as e:
             logger.error(f"初始化Twitter登录失败: {str(e)}")

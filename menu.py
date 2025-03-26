@@ -136,6 +136,25 @@ class Menu:
         print(f"当前交易所: {exchange.upper()}")
         
         if exchange == "binance":
+            # 显示已有的配置
+            current_api_key = os.getenv("BINANCE_API_KEY", "")
+            current_api_secret = os.getenv("BINANCE_API_SECRET", "")
+            
+            # 显示已有的值（部分隐藏）
+            if current_api_key:
+                masked_key = current_api_key[:4] + "*" * (len(current_api_key) - 8) + current_api_key[-4:]
+                print(f"当前API Key: {masked_key}")
+            if current_api_secret:
+                masked_secret = current_api_secret[:4] + "*" * (len(current_api_secret) - 8) + current_api_secret[-4:]
+                print(f"当前API Secret: {masked_secret}")
+            
+            # 提示用户是否需要更新
+            update = input("\n是否更新API密钥? (y/n，默认n): ").lower()
+            if update != 'y':
+                print("保持原有设置")
+                input("\n按 Enter 继续...")
+                return
+            
             api_key = self.get_string_input("请输入 Binance API Key: ")
             api_secret = self.get_string_input("请输入 Binance API Secret: ")
             
@@ -143,6 +162,29 @@ class Menu:
             self.update_env_var("BINANCE_API_SECRET", api_secret)
             
         elif exchange == "okx":
+            # 显示已有的配置
+            current_api_key = os.getenv("OKX_API_KEY", "")
+            current_api_secret = os.getenv("OKX_API_SECRET", "")
+            current_passphrase = os.getenv("OKX_PASSPHRASE", "")
+            
+            # 显示已有的值（部分隐藏）
+            if current_api_key:
+                masked_key = current_api_key[:4] + "*" * (len(current_api_key) - 8) + current_api_key[-4:]
+                print(f"当前API Key: {masked_key}")
+            if current_api_secret:
+                masked_secret = current_api_secret[:4] + "*" * (len(current_api_secret) - 8) + current_api_secret[-4:]
+                print(f"当前API Secret: {masked_secret}")
+            if current_passphrase:
+                masked_pass = "*" * len(current_passphrase)
+                print(f"当前Passphrase: {masked_pass}")
+            
+            # 提示用户是否需要更新
+            update = input("\n是否更新API密钥? (y/n，默认n): ").lower()
+            if update != 'y':
+                print("保持原有设置")
+                input("\n按 Enter 继续...")
+                return
+            
             api_key = self.get_string_input("请输入 OKX API Key: ")
             api_secret = self.get_string_input("请输入 OKX API Secret: ")
             passphrase = self.get_string_input("请输入 OKX Passphrase: ")
@@ -177,6 +219,24 @@ class Menu:
         self.show_banner()
         print("🐦 连接推特账户")
         
+        # 显示已有的配置
+        current_email = os.getenv("TWITTER_EMAIL", "")
+        current_password = os.getenv("TWITTER_PASSWORD", "")
+        
+        # 显示已有的值（部分隐藏）
+        if current_email:
+            masked_email = current_email[:3] + "*" * (len(current_email.split('@')[0]) - 3) + "@" + current_email.split('@')[1]
+            print(f"当前邮箱: {masked_email}")
+        if current_password:
+            print(f"当前密码: {'*' * len(current_password)}")
+        
+        # 提示用户是否需要更新
+        update = input("\n是否更新推特账户信息? (y/n，默认n): ").lower()
+        if update != 'y':
+            print("保持原有设置")
+            input("\n按 Enter 继续...")
+            return
+        
         email = self.get_string_input("请输入推特邮箱: ")
         password = self.get_string_input("请输入推特密码: ")
         
@@ -190,7 +250,17 @@ class Menu:
         """添加推特关注账号"""
         self.show_banner()
         print("👥 添加推特关注账号")
-        print("请输入要关注的推特账号用户名（每行一个，输入空行结束）")
+        
+        # 显示已有的关注账号
+        current_accounts = config.SOCIAL_CONFIG.get("twitter_accounts", [])
+        if current_accounts:
+            print("\n当前关注的账号:")
+            for i, account in enumerate(current_accounts, 1):
+                print(f"  {i}. {account}")
+        else:
+            print("\n当前未关注任何账号")
+        
+        print("\n请输入要关注的推特账号用户名（每行一个，输入空行结束）")
         print("注意: 只需输入用户名部分，无需输入完整URL或@符号")
         print("示例: 输入 'binance' 而不是 '@binance' 或 'https://x.com/binance'")
         print("---------------------------------------------------------------")
@@ -200,7 +270,7 @@ class Menu:
             account = input("> ")
             if not account:
                 break
-                
+            
             # 清理输入，去除可能的URL部分和@符号
             # 处理形如 https://x.com/username 或 @username 的输入
             if 'x.com/' in account or 'twitter.com/' in account:
@@ -211,11 +281,11 @@ class Menu:
             # 去除开头的@符号
             if account.startswith('@'):
                 account = account[1:]
-                
+            
             # 去除可能的查询参数
             if '?' in account:
                 account = account.split('?')[0]
-                
+            
             if account:
                 accounts.append(account)
                 print(f"已添加: {account}")
@@ -223,15 +293,13 @@ class Menu:
                 print("❌ 无效的用户名，请重新输入")
         
         if accounts:
-            # 读取配置
-            current_accounts = config.SOCIAL_CONFIG.get("twitter_accounts", [])
             # 添加新账号并去重
             updated_accounts = list(set(current_accounts + accounts))
             
             # 更新配置
             self.update_config_list("SOCIAL_CONFIG", "twitter_accounts", updated_accounts)
             
-            print(f"✅ 已添加 {len(accounts)} 个推特关注账号")
+            print(f"✅ 已添加 {len(accounts)} 个推特关注账号，现在共有 {len(updated_accounts)} 个关注账号")
         else:
             print("ℹ️ 未添加任何账号")
         
@@ -241,6 +309,29 @@ class Menu:
         """显示AI设置菜单"""
         self.show_banner()
         print("🧠 AI决策系统设置")
+        
+        # 显示已有的配置
+        current_api_key = os.getenv("DEEPSEEK_API_KEY", "")
+        current_api_url = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1")
+        current_api_path = os.getenv("DEEPSEEK_API_PATH", "/chat/completions")
+        
+        # 从配置中获取模型名称
+        current_model = getattr(config, "AI_CONFIG", {}).get("model", "deepseek-chat")
+        
+        # 显示已有的值
+        if current_api_key:
+            masked_key = current_api_key[:4] + "*" * (len(current_api_key) - 8) + current_api_key[-4:] if len(current_api_key) > 8 else "*" * len(current_api_key)
+            print(f"当前API Key: {masked_key}")
+        print(f"当前模型名称: {current_model}")
+        print(f"当前API URL: {current_api_url}")
+        print(f"当前API 路径: {current_api_path}")
+        
+        # 提示用户是否需要更新
+        update = input("\n是否更新AI设置? (y/n，默认n): ").lower()
+        if update != 'y':
+            print("保持原有设置")
+            input("\n按 Enter 继续...")
+            return
         
         api_key = self.get_string_input("请输入 AI模型 API Key: ")
         model_name = self.get_string_input("请输入模型名称 (默认: deepseek-chat): ", allow_empty=True) or "deepseek-chat"
@@ -280,7 +371,15 @@ class Menu:
         """设置止盈止损水平"""
         self.show_banner()
         print("🎯 调整止盈止损线")
-        print("  1. 调整止盈线")
+        
+        # 显示当前设置
+        current_take_profit = os.getenv("TAKE_PROFIT", "2.0")
+        current_stop_loss = os.getenv("STOP_LOSS", "3.0")
+        
+        print(f"\n当前止盈线: {current_take_profit}%")
+        print(f"当前止损线: {current_stop_loss}%")
+        
+        print("\n  1. 调整止盈线")
         print("  2. 调整止损线")
         print("  3. 返回上级菜单")
         print("\n" + "-" * 60)
@@ -306,7 +405,24 @@ class Menu:
         """设置交易时间周期"""
         self.show_banner()
         print("⏱️ 设置交易类别")
-        print("  1. 超短期交易 (1分钟K线)")
+        
+        timeframes = {
+            "1m": "超短期交易 (1分钟K线)",
+            "5m": "短线交易 (5分钟K线)",
+            "15m": "短中线交易 (15分钟K线)",
+            "30m": "中短线交易 (30分钟K线)",
+            "1h": "中线交易 (1小时K线)",
+            "4h": "中长线交易 (4小时K线)",
+            "1d": "长线交易 (1日K线)"
+        }
+        
+        # 显示当前设置
+        current_timeframe = config.TIMEFRAME if hasattr(config, "TIMEFRAME") else "1h"
+        current_desc = timeframes.get(current_timeframe, "未知")
+        
+        print(f"\n当前交易类别: {current_desc} ({current_timeframe})")
+        
+        print("\n  1. 超短期交易 (1分钟K线)")
         print("  2. 短线交易 (5分钟K线)")
         print("  3. 短中线交易 (15分钟K线)")
         print("  4. 中短线交易 (30分钟K线)")
@@ -321,7 +437,7 @@ class Menu:
         if choice == 8:
             return
         
-        timeframes = {
+        timeframe_map = {
             1: "1m",
             2: "5m",
             3: "15m",
@@ -331,7 +447,7 @@ class Menu:
             7: "1d"
         }
         
-        selected_timeframe = timeframes[choice]
+        selected_timeframe = timeframe_map[choice]
         
         # 更新配置
         self.update_config_value("TIMEFRAME", selected_timeframe)
